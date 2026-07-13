@@ -27,11 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.meals && data.meals.length > 0) {
                     displayRecipe(data.meals[0]);
                 } else {
-                    // Jika resep tidak ditemukan, tampilkan pesan & berikan resep acak
-                    detailTitle.textContent = `Recipe "${keyword}" not found`;
+                    // Jika resep tidak ditemukan, langsung panggil resep acak (tanpa pesan error)
                     detailImageContainer.innerHTML = '';
-                    detailBody.innerHTML = `<p style="text-align:center; color:#e74c3c;">Sorry, we couldn't find a recipe for <strong>${keyword}</strong>. How about trying this delicious recommendation instead?</p><hr style="margin:20px 0; border-top:1px solid #ddd;">`;
-                    fetchRandomRecipe(true);
+                    fetchRandomRecipe();
                 }
             })
             .catch(error => {
@@ -40,22 +38,21 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Fungsi mengambil resep acak (jika tidak ada keyword)
-    function fetchRandomRecipe(isFallback = false) {
+    // Fungsi mengambil resep acak
+    function fetchRandomRecipe() {
         fetch('https://www.themealdb.com/api/json/v1/1/random.php')
             .then(response => response.json())
             .then(data => {
                 if (data.meals) {
-                    displayRecipe(data.meals[0], isFallback);
+                    displayRecipe(data.meals[0]);
                 }
             });
     }
 
     // Fungsi menampilkan data resep ke dalam HTML
-    function displayRecipe(meal, isFallback = false) {
-        // Set Judul
-        const titleText = isFallback ? `Recommended: ${meal.strMeal}` : meal.strMeal;
-        detailTitle.textContent = titleText;
+    function displayRecipe(meal) {
+        // Set Judul Langsung dari API
+        detailTitle.textContent = meal.strMeal;
         document.title = `${meal.strMeal} Recipe | TastyBites`;
 
         // Set Gambar
@@ -73,13 +70,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         ingredientsHTML += '</ul>';
 
-        // Format cara memasak (mengubah enter menjadi baris baru HTML)
-        const instructionsFormatted = meal.strInstructions.replace(/\r\n/g, '<br><br>').replace(/\n/g, '<br><br>');
+        // Format cara memasak yang lebih rapi (Memecah baris baru menjadi paragraf tersendiri)
+        // Ini menghindari teks berantakan jika ada list nomor (1. 2. 3.)
+        const stepsArray = meal.strInstructions.split(/\r?\n/).filter(step => step.trim() !== '');
+        const instructionsFormatted = stepsArray.map(step => `<p class="step-item">${step.trim()}</p>`).join('');
 
         // Ekstraksi ID Video YouTube & Membuat Embed Player Responsif
         let youtubeVideoEmbed = '';
         if (meal.strYoutube) {
-            // Regex kuat untuk menangkap ID Video dari berbagai format link YouTube (desktop, mobile, share link)
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = meal.strYoutube.match(regExp);
             const videoId = (match && match[2].length === 11) ? match[2] : null;
@@ -126,12 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        // Masukkan ke dalam halaman
-        if (isFallback) {
-            detailBody.innerHTML += bodyContent;
-        } else {
-            detailBody.innerHTML = bodyContent;
-        }
+        // Masukkan ke dalam halaman (langsung menimpa teks loading)
+        detailBody.innerHTML = bodyContent;
 
         // Panggil resep terkait berdasarkan kategori
         fetchRelatedPosts(meal.strCategory, meal.idMeal);
@@ -146,11 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     relatedPostsContainer.innerHTML = '';
                     let count = 0;
                     
-                    // Acak urutan array resep (Shuffle)
                     const shuffledMeals = data.meals.sort(() => 0.5 - Math.random());
                     
                     shuffledMeals.forEach(meal => {
-                        // Jangan tampilkan resep yang sama di kotak related & batasi maksimal 5
                         if (meal.idMeal !== currentMealId && count < 5) {
                             count++;
                             const keywordForUrl = meal.strMeal.replace(/\s/g, '-').toLowerCase();
@@ -170,7 +162,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
-                    // Munculkan kontainer jika ada isinya
                     const relatedSection = document.querySelector('.related-posts-section');
                     if (count > 0) {
                         relatedSection.style.display = 'block';
