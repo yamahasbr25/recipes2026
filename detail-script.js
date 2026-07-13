@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set Gambar
         detailImageContainer.innerHTML = `<img src="${meal.strMealThumb}" alt="${meal.strMeal}" loading="lazy">`;
 
-        // Mengambil daftar bahan & takaran dari API (API memiliki format urut strIngredient1 hingga 20)
+        // Mengambil daftar bahan & takaran dari API
         let ingredientsHTML = '<ul class="ingredients-list">';
         for (let i = 1; i <= 20; i++) {
             const ingredient = meal[`strIngredient${i}`];
@@ -76,10 +76,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format cara memasak (mengubah enter menjadi baris baru HTML)
         const instructionsFormatted = meal.strInstructions.replace(/\r\n/g, '<br><br>').replace(/\n/g, '<br><br>');
 
-        // Tombol YouTube jika tersedia
-        let youtubeBtn = '';
+        // Ekstraksi ID Video YouTube & Membuat Embed Player Responsif
+        let youtubeVideoEmbed = '';
         if (meal.strYoutube) {
-            youtubeBtn = `<a href="${meal.strYoutube}" target="_blank" class="youtube-btn">▶ Watch Video Tutorial</a>`;
+            // Regex kuat untuk menangkap ID Video dari berbagai format link YouTube (desktop, mobile, share link)
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = meal.strYoutube.match(regExp);
+            const videoId = (match && match[2].length === 11) ? match[2] : null;
+            
+            if (videoId) {
+                youtubeVideoEmbed = `
+                    <div class="recipe-video">
+                        <h2>Video Tutorial</h2>
+                        <div class="video-container">
+                            <iframe 
+                                src="https://www.youtube.com/embed/${videoId}" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // Kategori & Asal Masakan (Tags)
@@ -103,12 +121,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="instructions-text">
                         ${instructionsFormatted}
                     </div>
-                    ${youtubeBtn}
+                    ${youtubeVideoEmbed}
                 </div>
             </div>
         `;
 
-        // Masukkan ke dalam halaman (Jika fallback, tambahkan di bawah pesan error)
+        // Masukkan ke dalam halaman
         if (isFallback) {
             detailBody.innerHTML += bodyContent;
         } else {
